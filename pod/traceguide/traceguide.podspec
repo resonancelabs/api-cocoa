@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "traceguide"
-  s.version          = "0.1.3"
+  s.version          = "0.1.4"
   s.summary          = "a cocoa / ObjC integration library for the Traceguide pilot."
 
   s.description      = <<-DESC
@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
 
   s.homepage         = "https://github.com/resonancelabs/api-cocoa"
   s.license          = 'MIT'
-  s.author           = { "Ben Sigelman" => "bhs@resonancelabs.com" }
+  s.author           = { "Resonance Labs" => "apis@resonancelabs.com" }
   s.source           = { :git => "https://github.com/resonancelabs/api-cocoa.git", :tag => s.version.to_s }
 
   s.platform     = :ios, '7.0'
