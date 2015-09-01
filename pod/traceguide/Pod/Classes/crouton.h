@@ -559,6 +559,33 @@
 
 @end
 
+@interface RLCommand : NSObject <TBase, NSCoding> {
+  BOOL __disable;
+
+  BOOL __disable_isset;
+}
+
+#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+@property (nonatomic, getter=disable, setter=setDisable:) BOOL disable;
+- (void) unsetDisable;
+#endif
+
+- (id) init;
+- (id) initWithDisable: (BOOL) disable;
+
+- (void) read: (id <TProtocol>) inProtocol;
+- (void) write: (id <TProtocol>) outProtocol;
+
+- (void) validate;
+
+#if !__has_feature(objc_arc)
+- (BOOL) disable;
+- (void) setDisable: (BOOL) disable;
+#endif
+- (BOOL) disableIsSet;
+
+@end
+
 @interface RLReportResponse : NSObject <TBase, NSCoding> {
   NSMutableArray * __commands;
   RLTiming * __timing;
@@ -593,33 +620,6 @@
 - (void) setTiming: (RLTiming *) timing;
 #endif
 - (BOOL) timingIsSet;
-
-@end
-
-@interface RLCommand : NSObject <TBase, NSCoding> {
-  BOOL __disable;
-
-  BOOL __disable_isset;
-}
-
-#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
-@property (nonatomic, getter=disable, setter=setDisable:) BOOL disable;
-- (void) unsetDisable;
-#endif
-
-- (id) init;
-- (id) initWithDisable: (BOOL) disable;
-
-- (void) read: (id <TProtocol>) inProtocol;
-- (void) write: (id <TProtocol>) outProtocol;
-
-- (void) validate;
-
-#if !__has_feature(objc_arc)
-- (BOOL) disable;
-- (void) setDisable: (BOOL) disable;
-#endif
-- (BOOL) disableIsSet;
 
 @end
 

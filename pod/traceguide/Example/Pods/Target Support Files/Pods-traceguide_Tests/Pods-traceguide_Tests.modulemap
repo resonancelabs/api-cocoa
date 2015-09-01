@@ -1,6 +1,0 @@
-framework module Pods_traceguide_Tests {
-  umbrella header "Pods-traceguide_Tests-umbrella.h"
-
-  export *
-  module * { export * }
-}

@@ -2690,6 +2690,122 @@
 
 @end
 
+@implementation RLCommand
+
+- (id) init
+{
+  self = [super init];
+#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#endif
+  return self;
+}
+
+- (id) initWithDisable: (BOOL) disable
+{
+  self = [super init];
+  __disable = disable;
+  __disable_isset = YES;
+  return self;
+}
+
+- (id) initWithCoder: (NSCoder *) decoder
+{
+  self = [super init];
+  if ([decoder containsValueForKey: @"disable"])
+  {
+    __disable = [decoder decodeBoolForKey: @"disable"];
+    __disable_isset = YES;
+  }
+  return self;
+}
+
+- (void) encodeWithCoder: (NSCoder *) encoder
+{
+  if (__disable_isset)
+  {
+    [encoder encodeBool: __disable forKey: @"disable"];
+  }
+}
+
+- (void) dealloc
+{
+  [super dealloc_stub];
+}
+
+- (BOOL) disable {
+  return __disable;
+}
+
+- (void) setDisable: (BOOL) disable {
+  __disable = disable;
+  __disable_isset = YES;
+}
+
+- (BOOL) disableIsSet {
+  return __disable_isset;
+}
+
+- (void) unsetDisable {
+  __disable_isset = NO;
+}
+
+- (void) read: (id <TProtocol>) inProtocol
+{
+  NSString * fieldName;
+  int fieldType;
+  int fieldID;
+
+  [inProtocol readStructBeginReturningName: NULL];
+  while (true)
+  {
+    [inProtocol readFieldBeginReturningName: &fieldName type: &fieldType fieldID: &fieldID];
+    if (fieldType == TType_STOP) { 
+      break;
+    }
+    switch (fieldID)
+    {
+      case 1:
+        if (fieldType == TType_BOOL) {
+          BOOL fieldValue = [inProtocol readBool];
+          [self setDisable: fieldValue];
+        } else { 
+          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        }
+        break;
+      default:
+        [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        break;
+    }
+    [inProtocol readFieldEnd];
+  }
+  [inProtocol readStructEnd];
+}
+
+- (void) write: (id <TProtocol>) outProtocol {
+  [outProtocol writeStructBeginWithName: @"Command"];
+  if (__disable_isset) {
+    [outProtocol writeFieldBeginWithName: @"disable" type: TType_BOOL fieldID: 1];
+    [outProtocol writeBool: __disable];
+    [outProtocol writeFieldEnd];
+  }
+  [outProtocol writeFieldStop];
+  [outProtocol writeStructEnd];
+}
+
+- (void) validate {
+  // check for required fields
+}
+
+- (NSString *) description {
+  NSMutableString * ms = [NSMutableString stringWithString: @"RLCommand("];
+  [ms appendString: @"disable:"];
+  [ms appendFormat: @"%i", __disable];
+  [ms appendString: @")"];
+  return [NSString stringWithString: ms];
+}
+
+@end
+
 @implementation RLReportResponse
 
 - (id) init
@@ -2879,122 +2995,6 @@
   [ms appendFormat: @"%@", __commands];
   [ms appendString: @",timing:"];
   [ms appendFormat: @"%@", __timing];
-  [ms appendString: @")"];
-  return [NSString stringWithString: ms];
-}
-
-@end
-
-@implementation RLCommand
-
-- (id) init
-{
-  self = [super init];
-#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
-#endif
-  return self;
-}
-
-- (id) initWithDisable: (BOOL) disable
-{
-  self = [super init];
-  __disable = disable;
-  __disable_isset = YES;
-  return self;
-}
-
-- (id) initWithCoder: (NSCoder *) decoder
-{
-  self = [super init];
-  if ([decoder containsValueForKey: @"disable"])
-  {
-    __disable = [decoder decodeBoolForKey: @"disable"];
-    __disable_isset = YES;
-  }
-  return self;
-}
-
-- (void) encodeWithCoder: (NSCoder *) encoder
-{
-  if (__disable_isset)
-  {
-    [encoder encodeBool: __disable forKey: @"disable"];
-  }
-}
-
-- (void) dealloc
-{
-  [super dealloc_stub];
-}
-
-- (BOOL) disable {
-  return __disable;
-}
-
-- (void) setDisable: (BOOL) disable {
-  __disable = disable;
-  __disable_isset = YES;
-}
-
-- (BOOL) disableIsSet {
-  return __disable_isset;
-}
-
-- (void) unsetDisable {
-  __disable_isset = NO;
-}
-
-- (void) read: (id <TProtocol>) inProtocol
-{
-  NSString * fieldName;
-  int fieldType;
-  int fieldID;
-
-  [inProtocol readStructBeginReturningName: NULL];
-  while (true)
-  {
-    [inProtocol readFieldBeginReturningName: &fieldName type: &fieldType fieldID: &fieldID];
-    if (fieldType == TType_STOP) { 
-      break;
-    }
-    switch (fieldID)
-    {
-      case 1:
-        if (fieldType == TType_BOOL) {
-          BOOL fieldValue = [inProtocol readBool];
-          [self setDisable: fieldValue];
-        } else { 
-          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
-        }
-        break;
-      default:
-        [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
-        break;
-    }
-    [inProtocol readFieldEnd];
-  }
-  [inProtocol readStructEnd];
-}
-
-- (void) write: (id <TProtocol>) outProtocol {
-  [outProtocol writeStructBeginWithName: @"Command"];
-  if (__disable_isset) {
-    [outProtocol writeFieldBeginWithName: @"disable" type: TType_BOOL fieldID: 1];
-    [outProtocol writeBool: __disable];
-    [outProtocol writeFieldEnd];
-  }
-  [outProtocol writeFieldStop];
-  [outProtocol writeStructEnd];
-}
-
-- (void) validate {
-  // check for required fields
-}
-
-- (NSString *) description {
-  NSMutableString * ms = [NSMutableString stringWithString: @"RLCommand("];
-  [ms appendString: @"disable:"];
-  [ms appendFormat: @"%i", __disable];
   [ms appendString: @")"];
   return [NSString stringWithString: ms];
 }
