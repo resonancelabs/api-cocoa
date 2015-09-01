@@ -1,0 +1,6 @@
+framework module traceguide {
+  umbrella header "traceguide-umbrella.h"
+
+  export *
+  module * { export * }
+}
