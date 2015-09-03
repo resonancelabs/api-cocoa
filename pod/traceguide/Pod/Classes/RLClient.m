@@ -28,7 +28,6 @@ static NSString* _guidGenerator()
 
 @interface RLActiveSpan()
 
-@property (nonatomic, copy) RLTraceJoinId* joinId;
 @property (nonatomic, copy) NSString* spanName;
 @property (nonatomic, weak) RLClient* client;
 
@@ -66,7 +65,7 @@ static NSString* _guidGenerator()
 static RLClient* s_sharedInstance = nil;
 static float kFirstRefreshDelay = 0;
 
-- (instancetype) initWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken
+- (instancetype) initWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken groupName:(NSString*)groupName
 {
     if (self = [super init]) {
         self.endUserKeyName = kDefaultEndUserIdKey;
@@ -77,11 +76,10 @@ static float kFirstRefreshDelay = 0;
         NSMutableArray* runtimeAttrs = @[[[RLKeyValue alloc] initWithKey:@"cruntime_platform" Value:@"cocoa"],
                                          [[RLKeyValue alloc] initWithKey:@"ios_version" Value:[[UIDevice currentDevice] systemVersion]],
                                          [[RLKeyValue alloc] initWithKey:@"device_model" Value:[[UIDevice currentDevice] model]]].mutableCopy;
-        NSString* runtimeGroupName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
         self->m_runtimeInfo = [[RLRuntime alloc]
                                initWithGuid:self->m_runtimeGuid
                                start_micros:[m_startTime toMicros]
-                               group_name:runtimeGroupName
+                               group_name:groupName
                                attrs:runtimeAttrs];
 
         self->m_pendingSpanRecords = [NSMutableArray array];
@@ -96,13 +94,19 @@ static float kFirstRefreshDelay = 0;
     return self;
 }
 
-+ (RLClient*) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken
++ (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken groupName:(NSString*)groupName
 {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        s_sharedInstance = [[super alloc] initWithServiceHostport:hostport token:accessToken];
+        s_sharedInstance = [[super alloc] initWithServiceHostport:hostport token:accessToken groupName:groupName];
     });
     return s_sharedInstance;
+}
+
++ (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken
+{
+    NSString* runtimeGroupName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
+    return [RLClient sharedInstanceWithServiceHostport:hostport token:accessToken groupName:runtimeGroupName];
 }
 
 + (RLClient*) sharedInstance
@@ -188,7 +192,7 @@ static NSString* jsonStringForDictionary(NSDictionary* dict) {
     RLActiveSpan* activeSpan = [RLActiveSpan new];
     activeSpan.spanName = spanName;
     activeSpan.client = self;
-    activeSpan.joinId = [[RLTraceJoinId alloc] initWithTraceKey:self.endUserKeyName Value:self.endUserId];
+    [activeSpan addJoinId:self.endUserKeyName value:self.endUserId];
     return activeSpan;
 }
 
@@ -427,22 +431,14 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
 
 - (void) dealloc
 {
-    [self markDone];  // in case we neglected to do so already.
+    [self finish];  // in case we neglected to do so already.
 }
 
-- (void) setJoinId:(RLTraceJoinId*)joinId
-{
-    m_joinIds = [NSMutableArray arrayWithObject:joinId];
+- (void) addJoinId:(NSString *)key value:(NSString *)value {
+    [m_joinIds addObject:[[RLTraceJoinId alloc] initWithTraceKey:key Value:value]];
 }
 
-- (RLTraceJoinId*)joinId {
-    if (m_joinIds.count > 0) {
-        return m_joinIds[0];
-    }
-    return nil;
-}
-
-- (void) markDone
+- (void) finish
 {
     if (m_endTime == nil) {
         m_endTime = [NSDate date];

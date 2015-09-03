@@ -14,7 +14,9 @@
 #
 # We do this with sed since we can. (So gross!!!)
 
-sed -i "" -e 's/\(@property (nonatomic,.*setter=set\)\([^:]*\)\(.*$\)/\1\2\3\
-- (void) unset\2;/' Pod/Classes/crouton.h
-
-sed -i "" -e 's/\(.* size: \)\([[][^ ]* count.*$\)/\1(int)\2/' Pod/Classes/crouton.m
+sed -e 's/\(@property (nonatomic,.*setter=set\)\([^:]*\)\(.*$\)/\1\2\3\
+- (void) unset\2;/' Pod/Classes/crouton.h > temp.tmp
+cp temp.tmp Pod/Classes/crouton.h
+sed -e 's/\(.* size: \)\([[][^ ]* count.*$\)/\1(int)\2/' Pod/Classes/crouton.m > temp.tmp
+cp temp.tmp Pod/Classes/crouton.m
+rm temp.tmp

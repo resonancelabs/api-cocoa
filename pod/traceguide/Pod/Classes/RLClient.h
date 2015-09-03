@@ -12,7 +12,8 @@
 
 /// See the golang ActiveSpan interface. Semantics here are [supposed to be] equivalent.
 @interface RLActiveSpan : NSObject
-- (void) markDone;  // (also called automatically by dealloc)
+- (void) finish;  // (also called automatically by dealloc)
+- (void) addJoinId:(NSString*)key value:(NSString*)value;
 - (void) setError:(NSString*)errorText;
 - (void) log:(NSString*)message;
 - (void) log:(NSString*)message payload:(NSDictionary*)payload;
@@ -25,8 +26,14 @@
 
 /// Call this early in the application lifecycle (calls to 'sharedInstance' will return nil beforehand).
 ///
+/// The `groupName` should identify the cocoa client process in the context of the larger distributed system; the default is the bundle name.
+///
 /// For the pilot, `hostport` should be "traceguide-api.mttr.to:9997".
++ (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken groupName:(NSString*)groupName;
+
+/// See sharedInstanceWithServiceHostport:token:groupName:. This is analagous, but groupName defaults to the bundle name.
 + (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken;
+
 /// Call this to get the shared instance after initialization.
 + (instancetype) sharedInstance;
 
