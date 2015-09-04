@@ -28,7 +28,7 @@
 ///
 /// The `groupName` should identify the cocoa client process in the context of the larger distributed system; the default is the bundle name.
 ///
-/// For the pilot, `hostport` should be "traceguide-api.mttr.to:9997".
+/// For the pilot, `hostport` should be "api.traceguide.io:9997".
 + (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken groupName:(NSString*)groupName;
 
 /// See sharedInstanceWithServiceHostport:token:groupName:. This is analagous, but groupName defaults to the bundle name.
