@@ -361,6 +361,13 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
     void (^rpcBlock)() = ^{
         __typeof__(self) strongSelf = weakSelf;
         if (strongSelf) {
+            void(^dropAndRecover)() = ^void() {
+                // Try to start from scratch.
+                //
+                // Don't-call revertBlock() to avoid a client feedback loop.
+                [strongSelf _refreshStub];
+            };
+
             RLReportResponse* response = nil;
             @try {
                 micros_t originMicros = [RLClockState nowMicros];
@@ -383,21 +390,24 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
             @catch (TApplicationException* e)
             {
                 NSLog(@"RPC exception %@: %@", [e name], [e description]);
-
-                // Try to start from scratch.
-                //
-                // Don't-call revertBlock() to avoid a client feedback loop.
-                [strongSelf _refreshStub];
+                dropAndRecover();
             }
             @catch (TException* e)
             {
                 // TTransportException, or unknown type of exception: drop data since "first, [we want to] do no harm."
-                NSLog(@"Unknown RPC error %@: %@", [e name], [e description]);
-                
-                // Whenever there is a transport error, refresh the client to try to get a new connection.
-                //
-                // Don't-call revertBlock() to avoid a client feedback loop.
-                [strongSelf _refreshStub];
+                NSLog(@"Unknown Thrift error %@: %@", [e name], [e description]);
+                dropAndRecover();
+            }
+            @catch (NSException* e)
+            {
+                // We really don't like catching NSException, but unfortunately
+                // Thrift is such a piece of junk that we will sleep better
+                // here if we do. For instance, there are NSRangeExceptions
+                // thrown by the THttpClient when the server peer returns 0
+                // bytes (which is an error, of course, but that doesn't mean
+                // the local process should crash!).
+                NSLog(@"Unexpected bad things happened %@: %@", [e name], [e description]);
+                dropAndRecover();
             }
         }
         [[UIApplication sharedApplication] endBackgroundTask:bgTaskId];
