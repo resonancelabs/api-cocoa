@@ -199,6 +199,180 @@
 
 @end
 
+@implementation RLNamedCounter
+
+- (id) init
+{
+  self = [super init];
+#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#endif
+  return self;
+}
+
+- (id) initWithName: (NSString *) Name Value: (int64_t) Value
+{
+  self = [super init];
+  __Name = [Name retain_stub];
+  __Name_isset = YES;
+  __Value = Value;
+  __Value_isset = YES;
+  return self;
+}
+
+- (id) initWithCoder: (NSCoder *) decoder
+{
+  self = [super init];
+  if ([decoder containsValueForKey: @"Name"])
+  {
+    __Name = [[decoder decodeObjectForKey: @"Name"] retain_stub];
+    __Name_isset = YES;
+  }
+  if ([decoder containsValueForKey: @"Value"])
+  {
+    __Value = [decoder decodeInt64ForKey: @"Value"];
+    __Value_isset = YES;
+  }
+  return self;
+}
+
+- (void) encodeWithCoder: (NSCoder *) encoder
+{
+  if (__Name_isset)
+  {
+    [encoder encodeObject: __Name forKey: @"Name"];
+  }
+  if (__Value_isset)
+  {
+    [encoder encodeInt64: __Value forKey: @"Value"];
+  }
+}
+
+- (void) dealloc
+{
+  [__Name release_stub];
+  [super dealloc_stub];
+}
+
+- (NSString *) Name {
+  return [[__Name retain_stub] autorelease_stub];
+}
+
+- (void) setName: (NSString *) Name {
+  [Name retain_stub];
+  [__Name release_stub];
+  __Name = Name;
+  __Name_isset = YES;
+}
+
+- (BOOL) NameIsSet {
+  return __Name_isset;
+}
+
+- (void) unsetName {
+  [__Name release_stub];
+  __Name = nil;
+  __Name_isset = NO;
+}
+
+- (int64_t) Value {
+  return __Value;
+}
+
+- (void) setValue: (int64_t) Value {
+  __Value = Value;
+  __Value_isset = YES;
+}
+
+- (BOOL) ValueIsSet {
+  return __Value_isset;
+}
+
+- (void) unsetValue {
+  __Value_isset = NO;
+}
+
+- (void) read: (id <TProtocol>) inProtocol
+{
+  NSString * fieldName;
+  int fieldType;
+  int fieldID;
+
+  [inProtocol readStructBeginReturningName: NULL];
+  while (true)
+  {
+    [inProtocol readFieldBeginReturningName: &fieldName type: &fieldType fieldID: &fieldID];
+    if (fieldType == TType_STOP) { 
+      break;
+    }
+    switch (fieldID)
+    {
+      case 1:
+        if (fieldType == TType_STRING) {
+          NSString * fieldValue = [inProtocol readString];
+          [self setName: fieldValue];
+        } else { 
+          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        }
+        break;
+      case 2:
+        if (fieldType == TType_I64) {
+          int64_t fieldValue = [inProtocol readI64];
+          [self setValue: fieldValue];
+        } else { 
+          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        }
+        break;
+      default:
+        [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        break;
+    }
+    [inProtocol readFieldEnd];
+  }
+  [inProtocol readStructEnd];
+}
+
+- (void) write: (id <TProtocol>) outProtocol {
+  [outProtocol writeStructBeginWithName: @"NamedCounter"];
+  if (__Name_isset) {
+    if (__Name != nil) {
+      [outProtocol writeFieldBeginWithName: @"Name" type: TType_STRING fieldID: 1];
+      [outProtocol writeString: __Name];
+      [outProtocol writeFieldEnd];
+    }
+  }
+  if (__Value_isset) {
+    [outProtocol writeFieldBeginWithName: @"Value" type: TType_I64 fieldID: 2];
+    [outProtocol writeI64: __Value];
+    [outProtocol writeFieldEnd];
+  }
+  [outProtocol writeFieldStop];
+  [outProtocol writeStructEnd];
+}
+
+- (void) validate {
+  // check for required fields
+  if (!__Name_isset) {
+    @throw [TProtocolException exceptionWithName: @"TProtocolException"
+                               reason: @"Required field 'Name' is not set."];
+  }
+  if (!__Value_isset) {
+    @throw [TProtocolException exceptionWithName: @"TProtocolException"
+                               reason: @"Required field 'Value' is not set."];
+  }
+}
+
+- (NSString *) description {
+  NSMutableString * ms = [NSMutableString stringWithString: @"RLNamedCounter("];
+  [ms appendString: @"Name:"];
+  [ms appendFormat: @"\"%@\"", __Name];
+  [ms appendString: @",Value:"];
+  [ms appendFormat: @"%qi", __Value];
+  [ms appendString: @")"];
+  return [NSString stringWithString: ms];
+}
+
+@end
+
 @implementation RLRuntime
 
 - (id) init
@@ -2322,7 +2496,7 @@
   return self;
 }
 
-- (id) initWithRuntime: (RLRuntime *) runtime span_records: (NSMutableArray *) span_records log_records: (NSMutableArray *) log_records timestamp_offset_micros: (int64_t) timestamp_offset_micros discarded_log_record_samples: (NSMutableArray *) discarded_log_record_samples
+- (id) initWithRuntime: (RLRuntime *) runtime span_records: (NSMutableArray *) span_records log_records: (NSMutableArray *) log_records timestamp_offset_micros: (int64_t) timestamp_offset_micros oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros counters: (NSMutableArray *) counters
 {
   self = [super init];
   __runtime = [runtime retain_stub];
@@ -2333,8 +2507,12 @@
   __log_records_isset = YES;
   __timestamp_offset_micros = timestamp_offset_micros;
   __timestamp_offset_micros_isset = YES;
-  __discarded_log_record_samples = [discarded_log_record_samples retain_stub];
-  __discarded_log_record_samples_isset = YES;
+  __oldest_micros = oldest_micros;
+  __oldest_micros_isset = YES;
+  __youngest_micros = youngest_micros;
+  __youngest_micros_isset = YES;
+  __counters = [counters retain_stub];
+  __counters_isset = YES;
   return self;
 }
 
@@ -2361,10 +2539,20 @@
     __timestamp_offset_micros = [decoder decodeInt64ForKey: @"timestamp_offset_micros"];
     __timestamp_offset_micros_isset = YES;
   }
-  if ([decoder containsValueForKey: @"discarded_log_record_samples"])
+  if ([decoder containsValueForKey: @"oldest_micros"])
   {
-    __discarded_log_record_samples = [[decoder decodeObjectForKey: @"discarded_log_record_samples"] retain_stub];
-    __discarded_log_record_samples_isset = YES;
+    __oldest_micros = [decoder decodeInt64ForKey: @"oldest_micros"];
+    __oldest_micros_isset = YES;
+  }
+  if ([decoder containsValueForKey: @"youngest_micros"])
+  {
+    __youngest_micros = [decoder decodeInt64ForKey: @"youngest_micros"];
+    __youngest_micros_isset = YES;
+  }
+  if ([decoder containsValueForKey: @"counters"])
+  {
+    __counters = [[decoder decodeObjectForKey: @"counters"] retain_stub];
+    __counters_isset = YES;
   }
   return self;
 }
@@ -2387,9 +2575,17 @@
   {
     [encoder encodeInt64: __timestamp_offset_micros forKey: @"timestamp_offset_micros"];
   }
-  if (__discarded_log_record_samples_isset)
+  if (__oldest_micros_isset)
   {
-    [encoder encodeObject: __discarded_log_record_samples forKey: @"discarded_log_record_samples"];
+    [encoder encodeInt64: __oldest_micros forKey: @"oldest_micros"];
+  }
+  if (__youngest_micros_isset)
+  {
+    [encoder encodeInt64: __youngest_micros forKey: @"youngest_micros"];
+  }
+  if (__counters_isset)
+  {
+    [encoder encodeObject: __counters forKey: @"counters"];
   }
 }
 
@@ -2398,7 +2594,7 @@
   [__runtime release_stub];
   [__span_records release_stub];
   [__log_records release_stub];
-  [__discarded_log_record_samples release_stub];
+  [__counters release_stub];
   [super dealloc_stub];
 }
 
@@ -2482,25 +2678,59 @@
   __timestamp_offset_micros_isset = NO;
 }
 
-- (NSMutableArray *) discarded_log_record_samples {
-  return [[__discarded_log_record_samples retain_stub] autorelease_stub];
+- (int64_t) oldest_micros {
+  return __oldest_micros;
 }
 
-- (void) setDiscarded_log_record_samples: (NSMutableArray *) discarded_log_record_samples {
-  [discarded_log_record_samples retain_stub];
-  [__discarded_log_record_samples release_stub];
-  __discarded_log_record_samples = discarded_log_record_samples;
-  __discarded_log_record_samples_isset = YES;
+- (void) setOldest_micros: (int64_t) oldest_micros {
+  __oldest_micros = oldest_micros;
+  __oldest_micros_isset = YES;
 }
 
-- (BOOL) discarded_log_record_samplesIsSet {
-  return __discarded_log_record_samples_isset;
+- (BOOL) oldest_microsIsSet {
+  return __oldest_micros_isset;
 }
 
-- (void) unsetDiscarded_log_record_samples {
-  [__discarded_log_record_samples release_stub];
-  __discarded_log_record_samples = nil;
-  __discarded_log_record_samples_isset = NO;
+- (void) unsetOldest_micros {
+  __oldest_micros_isset = NO;
+}
+
+- (int64_t) youngest_micros {
+  return __youngest_micros;
+}
+
+- (void) setYoungest_micros: (int64_t) youngest_micros {
+  __youngest_micros = youngest_micros;
+  __youngest_micros_isset = YES;
+}
+
+- (BOOL) youngest_microsIsSet {
+  return __youngest_micros_isset;
+}
+
+- (void) unsetYoungest_micros {
+  __youngest_micros_isset = NO;
+}
+
+- (NSMutableArray *) counters {
+  return [[__counters retain_stub] autorelease_stub];
+}
+
+- (void) setCounters: (NSMutableArray *) counters {
+  [counters retain_stub];
+  [__counters release_stub];
+  __counters = counters;
+  __counters_isset = YES;
+}
+
+- (BOOL) countersIsSet {
+  return __counters_isset;
+}
+
+- (void) unsetCounters {
+  [__counters release_stub];
+  __counters = nil;
+  __counters_isset = NO;
 }
 
 - (void) read: (id <TProtocol>) inProtocol
@@ -2576,7 +2806,23 @@
           [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
         }
         break;
-      case 6:
+      case 7:
+        if (fieldType == TType_I64) {
+          int64_t fieldValue = [inProtocol readI64];
+          [self setOldest_micros: fieldValue];
+        } else { 
+          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        }
+        break;
+      case 8:
+        if (fieldType == TType_I64) {
+          int64_t fieldValue = [inProtocol readI64];
+          [self setYoungest_micros: fieldValue];
+        } else { 
+          [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
+        }
+        break;
+      case 9:
         if (fieldType == TType_LIST) {
           int _size26;
           [inProtocol readListBeginReturningElementType: NULL size: &_size26];
@@ -2584,13 +2830,13 @@
           int _i27;
           for (_i27 = 0; _i27 < _size26; ++_i27)
           {
-            RLSampleCount *_elem28 = [[RLSampleCount alloc] init];
+            RLNamedCounter *_elem28 = [[RLNamedCounter alloc] init];
             [_elem28 read: inProtocol];
             [fieldValue addObject: _elem28];
             [_elem28 release_stub];
           }
           [inProtocol readListEnd];
-          [self setDiscarded_log_record_samples: fieldValue];
+          [self setCounters: fieldValue];
           [fieldValue release_stub];
         } else { 
           [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
@@ -2649,15 +2895,25 @@
     [outProtocol writeI64: __timestamp_offset_micros];
     [outProtocol writeFieldEnd];
   }
-  if (__discarded_log_record_samples_isset) {
-    if (__discarded_log_record_samples != nil) {
-      [outProtocol writeFieldBeginWithName: @"discarded_log_record_samples" type: TType_LIST fieldID: 6];
+  if (__oldest_micros_isset) {
+    [outProtocol writeFieldBeginWithName: @"oldest_micros" type: TType_I64 fieldID: 7];
+    [outProtocol writeI64: __oldest_micros];
+    [outProtocol writeFieldEnd];
+  }
+  if (__youngest_micros_isset) {
+    [outProtocol writeFieldBeginWithName: @"youngest_micros" type: TType_I64 fieldID: 8];
+    [outProtocol writeI64: __youngest_micros];
+    [outProtocol writeFieldEnd];
+  }
+  if (__counters_isset) {
+    if (__counters != nil) {
+      [outProtocol writeFieldBeginWithName: @"counters" type: TType_LIST fieldID: 9];
       {
-        [outProtocol writeListBeginWithElementType: TType_STRUCT size: (int)[__discarded_log_record_samples count]];
+        [outProtocol writeListBeginWithElementType: TType_STRUCT size: (int)[__counters count]];
         int idx34;
-        for (idx34 = 0; idx34 < [__discarded_log_record_samples count]; idx34++)
+        for (idx34 = 0; idx34 < [__counters count]; idx34++)
         {
-          [[__discarded_log_record_samples objectAtIndex: idx34] write: outProtocol];
+          [[__counters objectAtIndex: idx34] write: outProtocol];
         }
         [outProtocol writeListEnd];
       }
@@ -2682,8 +2938,12 @@
   [ms appendFormat: @"%@", __log_records];
   [ms appendString: @",timestamp_offset_micros:"];
   [ms appendFormat: @"%qi", __timestamp_offset_micros];
-  [ms appendString: @",discarded_log_record_samples:"];
-  [ms appendFormat: @"%@", __discarded_log_record_samples];
+  [ms appendString: @",oldest_micros:"];
+  [ms appendFormat: @"%qi", __oldest_micros];
+  [ms appendString: @",youngest_micros:"];
+  [ms appendFormat: @"%qi", __youngest_micros];
+  [ms appendString: @",counters:"];
+  [ms appendFormat: @"%@", __counters];
   [ms appendString: @")"];
   return [NSString stringWithString: ms];
 }

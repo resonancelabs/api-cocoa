@@ -53,6 +53,43 @@
 
 @end
 
+@interface RLNamedCounter : NSObject <TBase, NSCoding> {
+  NSString * __Name;
+  int64_t __Value;
+
+  BOOL __Name_isset;
+  BOOL __Value_isset;
+}
+
+#if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+@property (nonatomic, retain, getter=name, setter=setName:) NSString * Name;
+- (void) unsetName;
+@property (nonatomic, getter=value, setter=setValue:) int64_t Value;
+- (void) unsetValue;
+#endif
+
+- (id) init;
+- (id) initWithName: (NSString *) Name Value: (int64_t) Value;
+
+- (void) read: (id <TProtocol>) inProtocol;
+- (void) write: (id <TProtocol>) outProtocol;
+
+- (void) validate;
+
+#if !__has_feature(objc_arc)
+- (NSString *) name;
+- (void) setName: (NSString *) Name;
+#endif
+- (BOOL) NameIsSet;
+
+#if !__has_feature(objc_arc)
+- (int64_t) value;
+- (void) setValue: (int64_t) Value;
+#endif
+- (BOOL) ValueIsSet;
+
+@end
+
 @interface RLRuntime : NSObject <TBase, NSCoding> {
   NSString * __guid;
   int64_t __start_micros;
@@ -497,13 +534,17 @@
   NSMutableArray * __span_records;
   NSMutableArray * __log_records;
   int64_t __timestamp_offset_micros;
-  NSMutableArray * __discarded_log_record_samples;
+  int64_t __oldest_micros;
+  int64_t __youngest_micros;
+  NSMutableArray * __counters;
 
   BOOL __runtime_isset;
   BOOL __span_records_isset;
   BOOL __log_records_isset;
   BOOL __timestamp_offset_micros_isset;
-  BOOL __discarded_log_record_samples_isset;
+  BOOL __oldest_micros_isset;
+  BOOL __youngest_micros_isset;
+  BOOL __counters_isset;
 }
 
 #if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
@@ -515,12 +556,16 @@
 - (void) unsetLog_records;
 @property (nonatomic, getter=timestamp_offset_micros, setter=setTimestamp_offset_micros:) int64_t timestamp_offset_micros;
 - (void) unsetTimestamp_offset_micros;
-@property (nonatomic, retain, getter=discarded_log_record_samples, setter=setDiscarded_log_record_samples:) NSMutableArray * discarded_log_record_samples;
-- (void) unsetDiscarded_log_record_samples;
+@property (nonatomic, getter=oldest_micros, setter=setOldest_micros:) int64_t oldest_micros;
+- (void) unsetOldest_micros;
+@property (nonatomic, getter=youngest_micros, setter=setYoungest_micros:) int64_t youngest_micros;
+- (void) unsetYoungest_micros;
+@property (nonatomic, retain, getter=counters, setter=setCounters:) NSMutableArray * counters;
+- (void) unsetCounters;
 #endif
 
 - (id) init;
-- (id) initWithRuntime: (RLRuntime *) runtime span_records: (NSMutableArray *) span_records log_records: (NSMutableArray *) log_records timestamp_offset_micros: (int64_t) timestamp_offset_micros discarded_log_record_samples: (NSMutableArray *) discarded_log_record_samples;
+- (id) initWithRuntime: (RLRuntime *) runtime span_records: (NSMutableArray *) span_records log_records: (NSMutableArray *) log_records timestamp_offset_micros: (int64_t) timestamp_offset_micros oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros counters: (NSMutableArray *) counters;
 
 - (void) read: (id <TProtocol>) inProtocol;
 - (void) write: (id <TProtocol>) outProtocol;
@@ -552,10 +597,22 @@
 - (BOOL) timestamp_offset_microsIsSet;
 
 #if !__has_feature(objc_arc)
-- (NSMutableArray *) discarded_log_record_samples;
-- (void) setDiscarded_log_record_samples: (NSMutableArray *) discarded_log_record_samples;
+- (int64_t) oldest_micros;
+- (void) setOldest_micros: (int64_t) oldest_micros;
 #endif
-- (BOOL) discarded_log_record_samplesIsSet;
+- (BOOL) oldest_microsIsSet;
+
+#if !__has_feature(objc_arc)
+- (int64_t) youngest_micros;
+- (void) setYoungest_micros: (int64_t) youngest_micros;
+#endif
+- (BOOL) youngest_microsIsSet;
+
+#if !__has_feature(objc_arc)
+- (NSMutableArray *) counters;
+- (void) setCounters: (NSMutableArray *) counters;
+#endif
+- (BOOL) countersIsSet;
 
 @end
 

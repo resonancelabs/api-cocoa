@@ -10,63 +10,184 @@
 
 #import "crouton.h"
 
-/// See the golang ActiveSpan interface. Semantics here are [supposed to be] equivalent.
+/**
+ * The default traceguide host:port endpoint for this reporting library.
+ */
+extern NSString*const RLDefaultTraceguideReportingHostort;
+
+/**
+ * An `RLActiveSpan` represents an un-`finish`ed (i.e., "Active") Traceguide span. One or more spans – presumably from different processes – are assembled into traces based on JoinIds, per `addJoinId:value:`. Each span also serves as a short-lived per-operation log.
+ *
+ * Create `RLActiveSpan`s via the `RLClient`'s `beginSpan:` method.
+ */
 @interface RLActiveSpan : NSObject
+/**
+ * Mark the end time and record this span. (Called automatically by the destructor if need be)
+ */
 - (void) finish;  // (also called automatically by dealloc)
+
+/**
+ * Add a JoinId for `key` and `value` to the given span. Note that an `endUserId` can be set for all spans in an `RLClient` via its `endUserId` property.
+ *
+ * @param key the JoinId key
+ * @param value the JoinId value
+ */
 - (void) addJoinId:(NSString*)key value:(NSString*)value;
-- (void) setError:(NSString*)errorText;
+
+/**
+ * Attach a log message to this `RLActiveSpan`.
+ *
+ * @param message the log contents.
+ */
 - (void) log:(NSString*)message;
+
+/**
+ * Attach a log message and structured payload to this `RLActiveSpan`.
+ *
+ * @param message the log contents.
+ * @param payload an arbitrary structured payload which is serialized (in its entirety) along with the message.
+ */
 - (void) log:(NSString*)message payload:(NSDictionary*)payload;
+
+/**
+ * Attach an error log message to this `RLActiveSpan`.
+ *
+ * @param errorMessage the error log message
+ */
+- (void) logError:(NSString*)errorMessage;
+
 @end
 
-/// The entrypoint to Signal instrumentation for Cocoa.
-///
-/// Very early in the life of the application, call sharedInstanceWithServiceHostport. From then on, you may just call sharedInstance.
+/**
+ * The entrypoint to Traceguide instrumentation for Cocoa.
+ *
+ * As early as feasible in the life of the application (e.g., in `application:didFinishLaunchingWithOptions:`), call one of the static `+[RLClient sharedInstanceWith...]` methods; `RLClient` calls made prior to that initialization will be dropped.
+ *
+ * If there is a single end-user per Cocoa application instance, take advantage of the `RLClient.endUserId` property.
+ */
 @interface RLClient : NSObject
 
-/// Call this early in the application lifecycle (calls to 'sharedInstance' will return nil beforehand).
-///
-/// The `groupName` should identify the cocoa client process in the context of the larger distributed system; the default is the bundle name.
-///
-/// For the pilot, `hostport` should be "api.traceguide.io:9997".
+/**----------------------------------------------
+ * @name Initialization.
+ *-----------------------------------------------
+ */
+
+/**
+ * Call this early in the application lifecycle (calls to 'sharedInstance' will return nil beforehand).
+ *
+ * @param hostport the Traceguide reporting service hostport, defaulting to RLDefaultTraceguideReportingHostport.
+ * @param accessToken the Traceguide access token.
+ * @param groupName the "group name" to associate with spans from this process; e.g., the name of your iOS app or the bundle name.
+ *
+ * @return An `RLClient` instance that's ready to create spans and logs.
+ */
 + (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken groupName:(NSString*)groupName;
 
-/// See sharedInstanceWithServiceHostport:token:groupName:. This is analagous, but groupName defaults to the bundle name.
-+ (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken;
+/**
+ * @see `+[RLClient sharedInstanceWithServiceHostport:token:groupName]` for parameter details.
+ *
+ * @return An `RLClient` instance that's ready to create spans and logs.
+ */
++ (instancetype) sharedInstanceWithAccessToken:(NSString*)accessToken groupName:(NSString*)groupName;
 
-/// Call this to get the shared instance after initialization.
+/**
+ * @see `+[RLClient sharedInstanceWithServiceHostport:token:groupName]` for parameter details.
+ *
+ * @return An `RLClient` instance that's ready to create spans and logs.
+ */
++ (instancetype) sharedInstanceWithAccessToken:(NSString*)accessToken;
+
+/**
+ * Call this to get the shared `RLClient` singleton instance post-initialization. Calls prior to initialization will return `nil`.
+ *
+ * @return the previously-initialized `RLClient` instance, or `nil` if called prior to initialization.
+ */
 + (instancetype) sharedInstance;
 
-/// The remote service URL string (as derived from `sharedInstancWithServiceHostport:token:`).
+/**----------------------------------------------
+ * @name Traceguide service configuration.
+ *-----------------------------------------------
+ */
+
+/**
+ * The remote service URL string (as derived from `sharedInstancWithServiceHostport:token:`).
+ */
 @property (nonatomic, readonly) NSString* serviceUrl;
 
-/// The runtime guid, which is assigned automatically.
+/**
+ * The `RLClient` instance's globally unique id ("guid"), which is both immutable and assigned automatically by Traceguide.
+ */
 @property (nonatomic, readonly) NSString* runtimeGuid;
 
-/// The key name for the endUserId's JoinId. Defaults to "end_user_id", but may be overridden.
-///
-/// If you don't know what this is, the default is a fine place to start.
-@property (nonatomic, copy) NSString* endUserKeyName;
+/**----------------------------------------------
+ * @name Client-wide end-user ids.
+ *-----------------------------------------------
+ */
 
-/// The current end-user's id, which should be consistent with the end-user ids used outside of the mobile app.
+/**
+ * The current end-user's id, which should be consistent with the end-user ids used in Traceguide instrumentation outside of the mobile app.
+ *
+ * One can always set a per-`RLActiveSpan` end-user id manually using `-[RLActiveSpan addJoinId:value:]`; the advantage of this property is that all spans from this `RLClient` will automatically have the respective join id added.
+ */
 @property (nonatomic, copy) NSString* endUserId;
 
-/// Mark the beginning of a new RLActiveSpan.
-- (RLActiveSpan*) beginSpan:(NSString*)spanName;
+/**
+ * The key name for the endUserId's JoinId. Defaults to "end_user_id", but may be overridden.
+ *
+ * For instance, if you use a session id within the iOS app but don't always have client-side access to the endUserId used elsewhere in Traceguide instrumentation, you might set `endUserKeyName` to `session_id`, and of course set `endUserId` proper to that session id value.
+ *
+ * One can always set a per-`RLActiveSpan` end-user id manually using `-[RLActiveSpan addJoinId:value:]`; the advantage of this property is that all spans from this `RLClient` will automatically have the respective join id added.
+ */
+@property (nonatomic, copy) NSString* endUserKeyName;
 
-/// A simple logging interface. "payload" must be json-serializable.
+/**----------------------------------------------
+ * @name Creating new spans
+ *-----------------------------------------------
+ */
+
+/**
+ * Mark the beginning of a new `RLActiveSpan`.
+ *
+ * @param operation the operation name for the new span.
+ *
+ * @return the newly-initialized `RLActiveSpan`. It is the caller's responsibility to call `-[RLActiveSpan finish]`.
+ */
+- (RLActiveSpan*) beginSpan:(NSString*)operation;
+
+/**----------------------------------------------
+ * @name Logging
+ *-----------------------------------------------
+ */
+
+/**
+ * See `-[RLActiveSpan log:]`
+ */
 - (void) log:(NSString*)message;
+/**
+ * See `-[RLActiveSpan log:payload:]`
+ */
 - (void) log:(NSString*)message payload:(NSDictionary*)payload;
 
-/// An experimental API that's closer to something like Mixpanel's `track`. The idea
-/// is that the `stableName` is, well, stable; it is more of a unique id than a
-/// descriptive log message.
+/**
+ * An experimental API that's closer to something like Mixpanel's `track`.
+ *
+ * @param stableName the `stableName` is, well, stable; it is more of a unique id than a descriptive log message.
+ */
 - (void) logStable:(NSString*)stableName payload:(NSDictionary*)payload;
 
-/// The fully-specified superset of the other logging calls.
+/**
+ * The fully-specified superset of the other logging calls.
+ */
 - (void) log:(NSString*)message stableName:(NSString*)stableName payload:(NSDictionary*)payload spanGuid:(NSString*)spanGuid;
 
-/// Explicitly flush to the Signal service (this is called periodically in the background, too).
+/**----------------------------------------------
+ * @name Miscellaneous
+ *-----------------------------------------------
+ */
+
+/**
+ * Explicitly flush to the Traceguide service (this is called periodically in the background, too).
+ */
 - (void) flushToService;
 
 @end

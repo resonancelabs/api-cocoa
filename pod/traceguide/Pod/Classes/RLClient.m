@@ -16,6 +16,8 @@
 
 #import <stdlib.h>  // arc4random_uniform()
 
+NSString*const RLDefaultTraceguideReportingHostort = @"traceguide.io:9997";
+
 static NSString* kDefaultEndUserIdKey = @"end_user_id";
 static const int kFlushIntervalSeconds = 30;
 static const int kMaxBufferedSpans = 5000;
@@ -103,10 +105,14 @@ static float kFirstRefreshDelay = 0;
     return s_sharedInstance;
 }
 
-+ (instancetype) sharedInstanceWithServiceHostport:(NSString*)hostport token:(NSString*)accessToken
++ (instancetype) sharedInstanceWithAccessToken:(NSString*)accessToken groupName:(NSString*)groupName
 {
+    return [RLClient sharedInstanceWithServiceHostport:RLDefaultTraceguideReportingHostort token:accessToken groupName:groupName];
+}
+
++ (instancetype) sharedInstanceWithAccessToken:(NSString*)accessToken {
     NSString* runtimeGroupName = [[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString*)kCFBundleNameKey];
-    return [RLClient sharedInstanceWithServiceHostport:hostport token:accessToken groupName:runtimeGroupName];
+    return [RLClient sharedInstanceWithAccessToken:accessToken groupName:runtimeGroupName];
 }
 
 + (RLClient*) sharedInstance
@@ -355,7 +361,9 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
                             span_records:spansToFlush
                             log_records:logsToFlush
                             timestamp_offset_micros:tsCorrection
-                            discarded_log_record_samples:nil];
+                            oldest_micros:0
+                            youngest_micros:0
+                            counters:nil];
 
     __weak __typeof__(self) weakSelf = self;
     void (^rpcBlock)() = ^{
@@ -465,7 +473,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
     }
 }
 
-- (void) setError:(NSString*)errorText
+- (void) logError:(NSString*)errorMessage
 {
     if (!self.client.enabled) {
         // Noop.
@@ -477,7 +485,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
                               runtime_guid:self.client.runtimeGuid
                               span_guid:m_spanGuid
                               stable_name:nil
-                              message:errorText
+                              message:errorMessage
                               level:@"E"
                               thread_id:(int64_t)[NSThread currentThread]
                               filename:nil  // TODO: support this
