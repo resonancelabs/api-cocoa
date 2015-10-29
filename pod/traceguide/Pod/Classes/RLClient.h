@@ -119,6 +119,17 @@ extern NSString*const RLDefaultTraceguideReportingHostort;
  */
 @property (nonatomic, readonly) NSString* runtimeGuid;
 
+
+/**
+ * The `RLClient` instance's maximum number of records to buffer between reports.
+ */
+@property (nonatomic) NSUInteger maxLogRecords;
+
+/**
+ * The `RLClient` instance's maximum number of records to buffer between reports.
+ */
+@property (nonatomic) NSUInteger maxSpanRecords;
+
 /**----------------------------------------------
  * @name Client-wide end-user ids.
  *-----------------------------------------------

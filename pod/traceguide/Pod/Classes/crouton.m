@@ -1513,7 +1513,7 @@
   return self;
 }
 
-- (id) initWithSpan_guid: (NSString *) span_guid runtime_guid: (NSString *) runtime_guid span_name: (NSString *) span_name join_ids: (NSMutableArray *) join_ids oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros attributes: (NSMutableArray *) attributes deprecated_error_text: (NSString *) deprecated_error_text
+- (id) initWithSpan_guid: (NSString *) span_guid runtime_guid: (NSString *) runtime_guid span_name: (NSString *) span_name join_ids: (NSMutableArray *) join_ids oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros attributes: (NSMutableArray *) attributes error_flag: (BOOL) error_flag
 {
   self = [super init];
   __span_guid = [span_guid retain_stub];
@@ -1530,8 +1530,8 @@
   __youngest_micros_isset = YES;
   __attributes = [attributes retain_stub];
   __attributes_isset = YES;
-  __deprecated_error_text = [deprecated_error_text retain_stub];
-  __deprecated_error_text_isset = YES;
+  __error_flag = error_flag;
+  __error_flag_isset = YES;
   return self;
 }
 
@@ -1573,10 +1573,10 @@
     __attributes = [[decoder decodeObjectForKey: @"attributes"] retain_stub];
     __attributes_isset = YES;
   }
-  if ([decoder containsValueForKey: @"deprecated_error_text"])
+  if ([decoder containsValueForKey: @"error_flag"])
   {
-    __deprecated_error_text = [[decoder decodeObjectForKey: @"deprecated_error_text"] retain_stub];
-    __deprecated_error_text_isset = YES;
+    __error_flag = [decoder decodeBoolForKey: @"error_flag"];
+    __error_flag_isset = YES;
   }
   return self;
 }
@@ -1611,9 +1611,9 @@
   {
     [encoder encodeObject: __attributes forKey: @"attributes"];
   }
-  if (__deprecated_error_text_isset)
+  if (__error_flag_isset)
   {
-    [encoder encodeObject: __deprecated_error_text forKey: @"deprecated_error_text"];
+    [encoder encodeBool: __error_flag forKey: @"error_flag"];
   }
 }
 
@@ -1624,7 +1624,6 @@
   [__span_name release_stub];
   [__join_ids release_stub];
   [__attributes release_stub];
-  [__deprecated_error_text release_stub];
   [super dealloc_stub];
 }
 
@@ -1767,25 +1766,21 @@
   __attributes_isset = NO;
 }
 
-- (NSString *) deprecated_error_text {
-  return [[__deprecated_error_text retain_stub] autorelease_stub];
+- (BOOL) error_flag {
+  return __error_flag;
 }
 
-- (void) setDeprecated_error_text: (NSString *) deprecated_error_text {
-  [deprecated_error_text retain_stub];
-  [__deprecated_error_text release_stub];
-  __deprecated_error_text = deprecated_error_text;
-  __deprecated_error_text_isset = YES;
+- (void) setError_flag: (BOOL) error_flag {
+  __error_flag = error_flag;
+  __error_flag_isset = YES;
 }
 
-- (BOOL) deprecated_error_textIsSet {
-  return __deprecated_error_text_isset;
+- (BOOL) error_flagIsSet {
+  return __error_flag_isset;
 }
 
-- (void) unsetDeprecated_error_text {
-  [__deprecated_error_text release_stub];
-  __deprecated_error_text = nil;
-  __deprecated_error_text_isset = NO;
+- (void) unsetError_flag {
+  __error_flag_isset = NO;
 }
 
 - (void) read: (id <TProtocol>) inProtocol
@@ -1883,10 +1878,10 @@
           [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
         }
         break;
-      case 7:
-        if (fieldType == TType_STRING) {
-          NSString * fieldValue = [inProtocol readString];
-          [self setDeprecated_error_text: fieldValue];
+      case 9:
+        if (fieldType == TType_BOOL) {
+          BOOL fieldValue = [inProtocol readBool];
+          [self setError_flag: fieldValue];
         } else { 
           [TProtocolUtil skipType: fieldType onProtocol: inProtocol];
         }
@@ -1963,12 +1958,10 @@
       [outProtocol writeFieldEnd];
     }
   }
-  if (__deprecated_error_text_isset) {
-    if (__deprecated_error_text != nil) {
-      [outProtocol writeFieldBeginWithName: @"deprecated_error_text" type: TType_STRING fieldID: 7];
-      [outProtocol writeString: __deprecated_error_text];
-      [outProtocol writeFieldEnd];
-    }
+  if (__error_flag_isset) {
+    [outProtocol writeFieldBeginWithName: @"error_flag" type: TType_BOOL fieldID: 9];
+    [outProtocol writeBool: __error_flag];
+    [outProtocol writeFieldEnd];
   }
   [outProtocol writeFieldStop];
   [outProtocol writeStructEnd];
@@ -1994,8 +1987,8 @@
   [ms appendFormat: @"%qi", __youngest_micros];
   [ms appendString: @",attributes:"];
   [ms appendFormat: @"%@", __attributes];
-  [ms appendString: @",deprecated_error_text:"];
-  [ms appendFormat: @"\"%@\"", __deprecated_error_text];
+  [ms appendString: @",error_flag:"];
+  [ms appendFormat: @"%i", __error_flag];
   [ms appendString: @")"];
   return [NSString stringWithString: ms];
 }

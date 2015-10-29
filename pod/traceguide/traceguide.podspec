@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "traceguide"
-  s.version          = "1.0.0"
+  s.version          = "1.0.1"
   s.summary          = "a cocoa / ObjC integration library for the Traceguide pilot."
 
   s.description      = <<-DESC

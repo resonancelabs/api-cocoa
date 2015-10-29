@@ -329,7 +329,7 @@
   int64_t __oldest_micros;
   int64_t __youngest_micros;
   NSMutableArray * __attributes;
-  NSString * __deprecated_error_text;
+  BOOL __error_flag;
 
   BOOL __span_guid_isset;
   BOOL __runtime_guid_isset;
@@ -338,7 +338,7 @@
   BOOL __oldest_micros_isset;
   BOOL __youngest_micros_isset;
   BOOL __attributes_isset;
-  BOOL __deprecated_error_text_isset;
+  BOOL __error_flag_isset;
 }
 
 #if TARGET_OS_IPHONE || (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
@@ -356,12 +356,12 @@
 - (void) unsetYoungest_micros;
 @property (nonatomic, retain, getter=attributes, setter=setAttributes:) NSMutableArray * attributes;
 - (void) unsetAttributes;
-@property (nonatomic, retain, getter=deprecated_error_text, setter=setDeprecated_error_text:) NSString * deprecated_error_text;
-- (void) unsetDeprecated_error_text;
+@property (nonatomic, getter=error_flag, setter=setError_flag:) BOOL error_flag;
+- (void) unsetError_flag;
 #endif
 
 - (id) init;
-- (id) initWithSpan_guid: (NSString *) span_guid runtime_guid: (NSString *) runtime_guid span_name: (NSString *) span_name join_ids: (NSMutableArray *) join_ids oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros attributes: (NSMutableArray *) attributes deprecated_error_text: (NSString *) deprecated_error_text;
+- (id) initWithSpan_guid: (NSString *) span_guid runtime_guid: (NSString *) runtime_guid span_name: (NSString *) span_name join_ids: (NSMutableArray *) join_ids oldest_micros: (int64_t) oldest_micros youngest_micros: (int64_t) youngest_micros attributes: (NSMutableArray *) attributes error_flag: (BOOL) error_flag;
 
 - (void) read: (id <TProtocol>) inProtocol;
 - (void) write: (id <TProtocol>) outProtocol;
@@ -411,10 +411,10 @@
 - (BOOL) attributesIsSet;
 
 #if !__has_feature(objc_arc)
-- (NSString *) deprecated_error_text;
-- (void) setDeprecated_error_text: (NSString *) deprecated_error_text;
+- (BOOL) error_flag;
+- (void) setError_flag: (BOOL) error_flag;
 #endif
-- (BOOL) deprecated_error_textIsSet;
+- (BOOL) error_flagIsSet;
 
 @end
 

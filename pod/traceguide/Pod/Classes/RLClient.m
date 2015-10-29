@@ -20,8 +20,8 @@ NSString*const RLDefaultTraceguideReportingHostort = @"traceguide.io:9997";
 
 static NSString* kDefaultEndUserIdKey = @"end_user_id";
 static const int kFlushIntervalSeconds = 30;
-static const int kMaxBufferedSpans = 5000;
-static const int kMaxBufferedLogs = 10000;
+static const NSUInteger kDefaultMaxBufferedSpans = 5000;
+static const NSUInteger kDefaultMaxBufferedLogs = 10000;
 
 static NSString* _guidGenerator()
 {
@@ -62,7 +62,12 @@ static NSString* _guidGenerator()
     NSMutableArray* m_pendingLogRecords;
     dispatch_queue_t m_queue;
     dispatch_source_t m_flushTimer;
+    
+    UIBackgroundTaskIdentifier m_bgTaskId;
 }
+
+@synthesize maxLogRecords = m_maxLogRecords;
+@synthesize maxSpanRecords = m_maxSpanRecords;
 
 static RLClient* s_sharedInstance = nil;
 static float kFirstRefreshDelay = 0;
@@ -84,6 +89,8 @@ static float kFirstRefreshDelay = 0;
                                group_name:groupName
                                attrs:runtimeAttrs];
 
+        self->m_maxLogRecords = kDefaultMaxBufferedLogs;
+        self->m_maxSpanRecords = kDefaultMaxBufferedSpans;
         self->m_pendingSpanRecords = [NSMutableArray array];
         self->m_pendingLogRecords = [NSMutableArray array];
         self->m_queue = dispatch_queue_create("com.resonancelabs.signal.rpc", DISPATCH_QUEUE_SERIAL);
@@ -91,6 +98,7 @@ static float kFirstRefreshDelay = 0;
         self->m_refreshStubDelaySecs = kFirstRefreshDelay;
         self->m_enabled = true;  // depends on the remote kill-switch.
         self->m_clockState = [[RLClockState alloc] initWithRLClient:self];
+        self->m_bgTaskId = UIBackgroundTaskInvalid;
         [self _refreshStub];
     }
     return self;
@@ -118,7 +126,7 @@ static float kFirstRefreshDelay = 0;
 + (RLClient*) sharedInstance
 {
     if (s_sharedInstance == nil) {
-        NSLog(@"Must call sharedInstanceWithToken: before calling sharedInstance:!");
+        NSLog(@"Must call sharedInstanceWithAccessToken: before calling sharedInstance:!");
     }
     return s_sharedInstance;
 }
@@ -131,6 +139,23 @@ static float kFirstRefreshDelay = 0;
     return m_runtimeGuid;
 }
 
+- (NSUInteger) maxLogRecords {
+    return m_maxLogRecords;
+}
+
+- (void) setMaxLogRecords:(NSUInteger)capacity {
+    m_maxLogRecords = capacity;
+}
+
+- (NSUInteger) maxSpanRecords {
+    return m_maxLogRecords;
+}
+
+- (void) setMaxSpanRecords:(NSUInteger)capacity {
+    m_maxSpanRecords = capacity;
+}
+
+
 - (bool) enabled {
     return m_enabled;
 }
@@ -142,7 +167,7 @@ static float kFirstRefreshDelay = 0;
     }
 
     @synchronized(self) {
-        if (m_pendingSpanRecords.count < kMaxBufferedSpans) {
+        if (m_pendingSpanRecords.count < m_maxSpanRecords) {
             [m_pendingSpanRecords addObject:sr];
         }
     }
@@ -155,7 +180,7 @@ static float kFirstRefreshDelay = 0;
     }
 
     @synchronized(self) {
-        if (m_pendingLogRecords.count < kMaxBufferedLogs) {
+        if (m_pendingLogRecords.count < m_maxLogRecords) {
             [m_pendingLogRecords addObject:lr];
         }
     }
@@ -172,7 +197,7 @@ static NSString* jsonStringForDictionary(NSDictionary* dict) {
     } @catch (NSException* e) {
         return @"<invalid dict input for json conversation>";
     }
-    
+
     if (!jsonData) {
         NSLog(@"Could not encode JSON for dict: %@", error);
         return nil;
@@ -260,12 +285,12 @@ static NSString* jsonStringForDictionary(NSDictionary* dict) {
                 // Don't actually sleep the first time we try to initiate m_serviceStub.
                 strongSelf->m_refreshStubDelaySecs = 5;
             } else {
-                // Exponential backoff with a 30-minute max.
-                strongSelf->m_refreshStubDelaySecs = MIN(60*30, strongSelf->m_refreshStubDelaySecs * 1.5);
+                // Exponential backoff with a 5-minute max.
+                strongSelf->m_refreshStubDelaySecs = MIN(60*5, strongSelf->m_refreshStubDelaySecs * 1.5);
                 NSLog(@"RLClient backing off for %@ seconds", @(strongSelf->m_refreshStubDelaySecs));
                 [NSThread sleepForTimeInterval:strongSelf->m_refreshStubDelaySecs];
             }
-            
+
             NSObject<TTransport>* transport = [[THTTPClient alloc] initWithURL:[NSURL URLWithString:strongSelf->m_serviceUrl] userAgent:nil timeout:10];
             TBinaryProtocol* protocol = [[TBinaryProtocol alloc] initWithTransport:transport strictRead:YES strictWrite:YES];
             strongSelf->m_serviceStub = [[RLReportingServiceClient alloc] initWithProtocol:protocol];
@@ -323,12 +348,17 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
         // Deliberately do this after clearing the pending records (just in case).
         return;
     }
-    
+
     if (spansToFlush.count + logsToFlush.count == 0) {
         // Nothing to do.
         return;
     }
 
+    if (m_bgTaskId != UIBackgroundTaskInvalid) {
+        // Do not proceed if we are already flush()ing in the background.
+        return;
+    }
+    
     void (^revertBlock)() = ^{
         @synchronized(self) {
             // We apparently failed to flush these records, so re-enqueue them
@@ -341,13 +371,26 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
             correctTimestamps(logsToFlush, spansToFlush, -tsCorrection);
             [m_pendingSpanRecords insertObjects:spansToFlush atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, spansToFlush.count)]];
             [m_pendingLogRecords insertObjects:logsToFlush atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, logsToFlush.count)]];
+            if (m_bgTaskId != UIBackgroundTaskInvalid) {
+                [[UIApplication sharedApplication] endBackgroundTask:m_bgTaskId];
+                m_bgTaskId = UIBackgroundTaskInvalid;
+            }
         }
     };
 
     // We really want this flush to go through, even if the app enters the
     // background and iOS wants to move on with its life.
-    UIBackgroundTaskIdentifier bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithName:@"reslabs_flush" expirationHandler:revertBlock];
-    if (bgTaskId == UIBackgroundTaskInvalid) {
+    //
+    // NOTES ABOUT THE BACKGROUND TASK: we store m_bgTaskId is a member, which
+    // means that it's important we don't call this function recursively (and
+    // thus overwrite/lose the background task id). There is a recursive-"ish"
+    // aspect to this function, as rpcBlock calls _refreshStub on error which
+    // enqueues a call to flushToService on m_queue. m_queue is serialized,
+    // though, so we are guaranteed that only one flushToService call will be
+    // extant at any given moment, and thus it's safe to store the background
+    // task id in m_bgTaskId.
+    m_bgTaskId = [[UIApplication sharedApplication] beginBackgroundTaskWithName:@"reslabs_flush" expirationHandler:revertBlock];
+    if (m_bgTaskId == UIBackgroundTaskInvalid) {
         NSLog(@"unable to enter the background, so skipping flush");
         revertBlock();
         return;
@@ -409,16 +452,16 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
             @catch (NSException* e)
             {
                 // We really don't like catching NSException, but unfortunately
-                // Thrift is such a piece of junk that we will sleep better
-                // here if we do. For instance, there are NSRangeExceptions
-                // thrown by the THttpClient when the server peer returns 0
-                // bytes (which is an error, of course, but that doesn't mean
-                // the local process should crash!).
+                // Thrift is sufficiently flaky that we will sleep better here
+                // if we do.
                 NSLog(@"Unexpected bad things happened %@: %@", [e name], [e description]);
                 dropAndRecover();
             }
         }
-        [[UIApplication sharedApplication] endBackgroundTask:bgTaskId];
+
+        // We can safely end the background task at this point.
+        [[UIApplication sharedApplication] endBackgroundTask:strongSelf->m_bgTaskId];
+        strongSelf->m_bgTaskId = UIBackgroundTaskInvalid;
     };
 
     dispatch_async(m_queue, rpcBlock);
@@ -434,6 +477,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
     NSDate* m_startTime;
     NSDate* m_endTime;
     NSMutableArray* m_joinIds;
+    bool m_errorFlag;
 }
 
 - (instancetype) init
@@ -443,6 +487,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
         self->m_startTime = [NSDate date];
         self->m_endTime = nil;
         self->m_joinIds = [NSMutableArray array];
+        self->m_errorFlag = false;
     }
     return self;
 }
@@ -460,7 +505,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
 {
     if (m_endTime == nil) {
         m_endTime = [NSDate date];
-        
+
         [self.client appendSpanRecord:[[RLSpanRecord alloc]
                                        initWithSpan_guid:m_spanGuid
                                        runtime_guid:self.client.runtimeGuid
@@ -469,7 +514,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
                                        oldest_micros:[m_startTime toMicros]
                                        youngest_micros:[m_endTime toMicros]
                                        attributes:nil
-                                       deprecated_error_text:nil]];
+                                       error_flag:m_errorFlag]];
     }
 }
 
@@ -480,6 +525,7 @@ static void correctTimestamps(NSArray* logRecords, NSArray* spanRecords, micros_
         return;
     }
 
+    self->m_errorFlag = true;
     RLLogRecord* logRecord = [[RLLogRecord alloc]
                               initWithTimestamp_micros:[[NSDate date] toMicros]
                               runtime_guid:self.client.runtimeGuid
